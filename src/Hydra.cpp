@@ -1,111 +1,113 @@
 /* Copyright 2016 Thomas Bergwinkl. All Rights Reserved.
-
+(c) 2020 Artem Lutov
  */
 
+#include "ESPAsyncWebServer.h"
+#include "NTriplesParser.h"
+#include "NTriplesSerializer.h"
 #include "Hydra.h"
 
-#include <RDFNTriplesParser.h>
-#include <RDFNTriplesSerializer.h>
+using namespace smallhydra;
 
-RDFString localhostApi("http://localhost/api");
+String  localhostApi = String("http://localhost/api", true);
 
 Hydra::Hydra()
-    : raw(0),
-      api(0) {
+	: raw(nullptr),
+	  api()
+{
 }
 
-void Hydra::begin(String filename, String path, String hostname) {
-  this->path = path;
-
-  readApiDocument(filename);
+Hydra::~Hydra()
+{
+	if(raw) {
+		delete raw;
+		raw = nullptr;
+	}
 }
 
-String Hydra::absoluteUrl(AsyncWebServerRequest* request) {
-  String url = String("http://");
-
-  if (request->host().length() != 0) {
-    url += request->host();
-  } else {
-    url += WiFi.localIP().toString();
-  }
-
-  url += request->url();
-
-  return url;
+void Hydra::begin(const String& filename, const String& path, const String& hostname)
+{
+	this->path = path;
+	readApiDocument(filename);
 }
 
-void Hydra::handleRequest(AsyncWebServerRequest* request,
-                          AsyncWebServerResponse* response) {
-  response->addHeader(
-      "Link",
-      "<" + absoluteUrl(request) + path
-          + ">; rel=\"http://www.w3.org/ns/hydra/core#apiDocumentation\"");
+String Hydra::absoluteUrl(const AsyncWebServerRequest& request)
+{
+	String url = String("http://");
+
+	if (request.host().length() != 0)
+		url += String(request.host());
+	else url += String(WiFi.localIP().toString());
+
+	url += String(request.url());
+	if(!url.allocated())
+		url.acquire();
+
+	return url;
 }
 
-void Hydra::handleApiRequest(AsyncWebServerRequest* request) {
-  if (!api) {
-    String hostname = request->host();
-
-    if (hostname.length() == 0) {
-      hostname = WiFi.localIP().toString();
-    }
-
-    api = patchApiDocument(hostname);
-  }
-
-  const uint8_t* content = NTriplesSerializer::serialize_static(api);
-
-  request->send(200, "application/n-triples", (const char*) content);
-
-  delete[] content;
+void Hydra::handleRequest(const AsyncWebServerRequest& request,
+                          AsyncWebServerResponse& response)
+{
+	response.addHeader(
+	    "Link",
+	    "<" + AString(absoluteUrl(request) += path)
+	    + ">; rel=\"http://www.w3.org/ns/hydra/core#apiDocumentation\"");
 }
 
-void Hydra::readApiDocument(String path) {
-  File file = SPIFFS.open(path, "r");
+void Hydra::handleApiRequest(AsyncWebServerRequest& request)
+{
+	if (!api) {
+		String hostname = request.host();
+		if (hostname.length() == 0)
+			hostname = WiFi.localIP().toString();
+		api = patchApiDocument(hostname);
+	}
 
-  if (!file) {
-    return;
-  }
-
-  NTriplesParser::parse_static(document.string(file.readString(), true),
-                               &document);
-
-  raw = document.dataset();
-
-  for (int i = 0; i < document.quads.length; i++) {
-    raw->quads.add(document.quads.get(i));
-  }
+	String *content = new String();
+	NTriplesSerializer  ser;
+	request.send(200, "application/n-triples", ser.serialize(api).c_str());
 }
 
-RDFDataset* Hydra::patchApiDocument(String hostname) {
-  hostname = hostname.length() != 0 ? hostname : WiFi.localIP().toString();
+void Hydra::readApiDocument(const String& path)
+{
+	File file = SPIFFS.open(AString(path), "r");
+	if (!file)
+		return;
+	NTriplesParser  prs;
+	prs.parse(String(file.readString(), true));
+	if(raw)
+		delete raw;
+	raw = prs.release();
+	for(auto piq = document.quads.begin(); piq != document.quads.end(); piq = piq->next())
+		raw.quads.add(**piq);
+}
 
-  const RDFTerm* apiTerm = document.namedNode(
-      document.string("http://" + hostname + "/" + path, true));
+Dataset& Hydra::patchApiDocument(const String& hostname)
+{
+	String  hnameUrl = String("http://");
+	hnameUrl += hostname.length() != 0 ? hostname : String(WiFi.localIP().toString());
+	hnameUrl += String("/");
+	hnameUrl += path;
+	const Term* apiTerm = document.namedNode(hnameUrl);
 
-  RDFDataset* patched = document.dataset();
 
-  if (!raw) {
-    return patched;
-  }
+	if (!raw)
+		return document;
+	Dataset& patched = document;
+	for(auto piq = document.quads.begin(); piq != document.quads.end(); piq = piq->next()) {
+		const Quad& triple = **piq;
+		const Term* subject = triple.subject;
+		const Term* object = triple.object;
 
-  for (int i = 0; i < raw->quads.length; i++) {
-    const RDFQuad* triple = raw->quads.get(i);
+		if (*ubject->value == localhostApi)
+			subject = apiTerm;
 
-    const RDFTerm* subject = triple->subject;
-    const RDFTerm* predicate = triple->predicate;
-    const RDFTerm* object = triple->object;
+		if (*object->value == localhostApi)
+			object = apiTerm;
 
-    if (subject->value->equals(localhostApi)) {
-      subject = apiTerm;
-    }
+		patched.quads.add(document.quad(*subject, *triple.predicate, *object));
+	}
 
-    if (object->value->equals(localhostApi)) {
-      object = apiTerm;
-    }
-
-    patched->quads.add(document.triple(subject, predicate, object));
-  }
-
-  return patched;
+	return patched;
 }

@@ -1,10 +1,12 @@
 #include <ESP8266WiFi.h>
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
-#include <Hydra.h>
-#include <RDF.h>
-#include <RDFNTriplesParser.h>
-#include <RDFNTriplesSerializer.h>
+#include "Hydra.h
+#include "NTriplesParser.h"
+#include "NTriplesSerializer.h"
+
+
+using namespace smallhydra, smallrdf;
 
 const char* ssid = "";
 const char* password = "";
