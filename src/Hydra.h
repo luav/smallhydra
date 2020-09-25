@@ -5,13 +5,15 @@
 #ifndef HYDRA_H_
 #define HYDRA_H_
 
-#include "RDF.h"
+//#include "ESPAsyncWebServer.h"
+#include "RDF.hpp"
 
 
 namespace smallhydra
 {
 
 using namespace smallrdf;
+using smallrdf::String;
 
 class AsyncWebServerRequest;  // Defined in ESPAsyncWebServer
 

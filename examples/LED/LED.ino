@@ -1,130 +1,157 @@
+// namespace espdefs {
+#ifdef ESP32
+#include <WiFi.h>
+#include <ESPAsyncWebServer.h>
+#else
+#include <Arduino.h>
 #include <ESP8266WiFi.h>
+// #include <Hash.h>
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
-#include "Hydra.h
+#endif  // ESP32
+#include <FS.h>
+#include "SPIFFS.h"
+// }  // espdefs
+
+// // Note: Arduino.h may define min and max macroses that break C++ stdlib compilation
+// #if defined(_LIBCPP_VERSION) || defined(__GLIBCXX__) || defined(__cpp_lib_result_of_sfinae)
+// #undef max
+// #undef min
+// #endif // C++ stdlib
+
+#include "Hydra.h"
+#include "RDF.hpp"
 #include "NTriplesParser.h"
 #include "NTriplesSerializer.h"
 
 
-using namespace smallhydra, smallrdf;
+using namespace smallhydra;
+using namespace smallrdf;
+// using namespace espdefs;
+using RdfString = smallrdf::String;
 
 const char* ssid = "";
 const char* password = "";
 
-void initWifi() {
-  WiFi.begin(ssid, password);
+void initWifi()
+{
+	WiFi.begin(ssid, password);
 
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
+	while (WiFi.status() != WL_CONNECTED) {
+		delay(500);
+		Serial.print(".");
+	}
 }
 
-RDFString rdfType("http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
-RDFString dhLightClass("http://ns.bergnet.org/dark-horse#Light");
-RDFString dhOffClass("http://ns.bergnet.org/dark-horse#Off"); 
-RDFString dhOnClass("http://ns.bergnet.org/dark-horse#On");
-RDFString dhState("http://ns.bergnet.org/dark-horse#state");
+RdfString Type("http://www.w3.org/1999/02/22--syntax-ns#type");
+RdfString dhLightClass("http://ns.bergnet.org/dark-horse#Light");
+RdfString dhOffClass("http://ns.bergnet.org/dark-horse#Off");
+RdfString dhOnClass("http://ns.bergnet.org/dark-horse#On");
+RdfString dhState("http://ns.bergnet.org/dark-horse#state");
 AsyncWebServer server(80);
 Hydra hydra;
 
-class Led {
- public:
-  Led(int pin): pin(pin) {}
+class Led
+{
+public:
+	Led(int pin): pin(pin) {}
 
-  void begin() {
-    pinMode(pin, OUTPUT);
-    digitalWrite(pin, HIGH);
-  }
+	void begin()
+	{
+		pinMode(pin, OUTPUT);
+		digitalWrite(pin, HIGH);
+	}
 
-  bool isOn() {
-    return digitalRead(pin) == LOW;
-  }
+	bool isOn()
+	{
+		return digitalRead(pin) == LOW;
+	}
 
-  void on() {
-    digitalWrite(pin, LOW);
-  }
+	void on()
+	{
+		digitalWrite(pin, LOW);
+	}
 
-  void off() {
-    digitalWrite(pin, HIGH);
-  }
+	void off()
+	{
+		digitalWrite(pin, HIGH);
+	}
 
-  void get(AsyncWebServerRequest* request) {
-    RDFDocument document;
+	void get(AsyncWebServerRequest* request)
+	{
+		Document document;
 
-    const RDFString* iri = document.string(hydra.absoluteUrl(request), true);
-    const RDFNamedNode* subject = document.namedNode(iri);
+		const RdfString* iri = document.string(RdfString(hydra.absoluteUrl(*request), true));
+		const NamedNode* subject = document.namedNode(iri);
 
-    const RDFQuad* typeQuad = document.triple(subject, document.namedNode(&rdfType), document.namedNode(&dhLightClass));
+		const Quad* typeQuad = document.quad(*subject, *document.namedNode(Type), *document.namedNode(dhLightClass));
 
-    RDFString* status = isOn() ? &dhOnClass : &dhOffClass;
-    const RDFQuad* statusQuad = document.triple(subject, document.namedNode(&dhState), document.namedNode(status));
+		RdfString* status = isOn() ? &dhOnClass : &dhOffClass;
+		const Quad* statusQuad = document.quad(*subject, document.namedNode(dhState), document.namedNode(*status));
 
-    const uint8_t* content = NTriplesSerializer::serialize_static(&document);
+		NTriplesSerializer  ser;
+		AsyncWebServerResponse* response = request->beginResponse(200, "application/n-triples", ser.serialize(document).c_str());
+		hydra.handleRequest(*request, *response);
+		request->send(response);
+	}
 
-    AsyncWebServerResponse* response = request->beginResponse(200, "application/n-triples", (const char*)content);
-    hydra.handleRequest(request, response);
-    request->send(response);
+	void put(AsyncWebServerRequest* request, uint8_t* data, size_t len)
+	{
+		Document document;
+		NTriplesParser  prs;
+		prs.parse(*document.string(RdfString(data, len)));
+		const Quad* state = document.quads.find(Quad(0, document.namedNode(dhState)));
 
-    delete[] content;
-  }
+		if (state) {
+			if (*state->object->value == dhOnClass) {
+				on();
+			} else if (*state->object->value == dhOffClass) {
+				off();
+			}
+		}
 
-  void put(AsyncWebServerRequest* request, uint8_t* data, size_t len) {
-    RDFDocument document;
+		get(request);
+	}
 
-    const RDFString* content = document.string(data, len);
-    NTriplesParser::parse_static(content, &document);
-  
-    const RDFQuad* state = document.find(0, document.namedNode(&dhState));
-  
-    if (state) {
-      if (state->object->value->equals(&dhOnClass)) {
-        on();
-      } else if (state->object->value->equals(&dhOffClass)) {
-        off();
-      }
-    }
-
-    get(request);
-  }
-
- protected:
-  int pin;
+protected:
+	int pin;
 };
 
 Led led0(0);
 
-void setup () {
-  Serial.begin(115200);
-  initWifi();
-  SPIFFS.begin();
-  hydra.begin("/api.nt", "api");
-  led0.begin();
+void setup ()
+{
+	Serial.begin(115200);
+	initWifi();
+	SPIFFS.begin();
+	hydra.begin(RdfString("/api.nt"), RdfString("api"));
+	led0.begin();
 
-  server.on("/api", HTTP_GET, [&hydra](AsyncWebServerRequest* request) {
-    Serial.println("GET /api");
+	server.on("/api", HTTP_GET, [&hydra](AsyncWebServerRequest* request) {
+		Serial.println("GET /api");
 
-    hydra.handleApiRequest(request);
-  });
+		hydra.handleApiRequest(*request);
+	});
 
-  server.on("/", HTTP_GET, [&led0](AsyncWebServerRequest* request) {
-    Serial.println("GET /");
+	server.on("/", HTTP_GET, [&led0](AsyncWebServerRequest* request) {
+		Serial.println("GET /");
 
-    led0.get(request);
-  });
+		led0.get(request);
+	});
 
-  server.on("/", HTTP_PUT, [](AsyncWebServerRequest* request) {
-  }, [](AsyncWebServerRequest* request, String filename, size_t index, uint8_t* data, size_t len, bool final) {
-  }, [&led0](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
-    Serial.println("PUT /");
+	server.on("/", HTTP_PUT, [](AsyncWebServerRequest* request) {
+	}, [](AsyncWebServerRequest* request, AString filename, size_t index, uint8_t* data, size_t len, bool final) {
+	}, [&led0](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
+		Serial.println("PUT /");
 
-    led0.put(request, data, len);
-  });
+		led0.put(request, data, len);
+	});
 
-  server.begin();
+	server.begin();
 
-  Serial.println("http://" + WiFi.localIP().toString() + "/");
+	Serial.println("http://" + WiFi.localIP().toString() + "/");
 }
 
-void loop () {
+void loop ()
+{
 }

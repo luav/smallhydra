@@ -4,13 +4,13 @@
 	<Project>
 		<Option title="smallhydra" />
 		<Option pch_mode="2" />
-		<Option compiler="avr-gcc" />
+		<Option compiler="gcc" />
 		<Build>
 			<Target title="Debug">
-				<Option output="bin/Debug/libsmallhydra" prefix_auto="1" extension_auto="1" />
+				<Option output="bin/Debug/smallhydra" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Debug/" />
 				<Option type="3" />
-				<Option compiler="avr-gcc" />
+				<Option compiler="gcc" />
 				<Option createDefFile="1" />
 				<Option createStaticLib="1" />
 				<Compiler>
@@ -28,16 +28,17 @@
 					<Add option="-fstack-protector-all" />
 					<Add option="-D_FORTIFY_SOURCE=2" />
 					<Add option="-D_GLIBCXX_ASSERTIONS" />
+					<Add directory="src" />
 				</Compiler>
 				<Linker>
 					<Add directory="../smallrdf/bin/Debug" />
 				</Linker>
 			</Target>
 			<Target title="Release">
-				<Option output="bin/Release/libsmallhydra" prefix_auto="1" extension_auto="1" />
+				<Option output="bin/Release/smallhydra" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Release/" />
 				<Option type="3" />
-				<Option compiler="avr-gcc" />
+				<Option compiler="gcc" />
 				<Option createDefFile="1" />
 				<Option createStaticLib="1" />
 				<Compiler>
@@ -52,10 +53,40 @@
 					<Add directory="../smallrdf/bin/Release" />
 				</Linker>
 			</Target>
+			<Target title="DebugAVR">
+				<Option output="bin/Debug/smallhydra" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="3" />
+				<Option compiler="avr-gcc" />
+				<Option createDefFile="1" />
+				<Option createStaticLib="1" />
+				<Compiler>
+					<Add option="-mmcu=atmega3250" />
+					<Add option="-Wall" />
+					<Add option="-g" />
+					<Add option="-Wshadow" />
+					<Add option="-Winit-self" />
+					<Add option="-Wredundant-decls" />
+					<Add option="-Winline" />
+					<Add option="-Wswitch-enum" />
+					<Add option="-Wswitch-default" />
+					<Add option="-Og" />
+					<Add option="-shared" />
+					<Add option="-fasynchronous-unwind-tables" />
+					<Add option="-fstack-protector-all" />
+					<Add option="-D_FORTIFY_SOURCE=2" />
+					<Add option="-D_GLIBCXX_ASSERTIONS" />
+					<Add directory="src" />
+				</Compiler>
+				<Linker>
+					<Add directory="../smallrdf/bin/Debug" />
+				</Linker>
+			</Target>
+			<Environment>
+				<Variable name="ARDUINO_DIR" value="/opt/xdk/arduino" />
+			</Environment>
 		</Build>
 		<Compiler>
-			<Add option="-mmcu=atmega325p" />
-			<Add option="-Wzero-as-null-pointer-constant" />
 			<Add option="-Wnon-virtual-dtor" />
 			<Add option="-Wcast-align" />
 			<Add option="-Wundef" />
@@ -64,6 +95,7 @@
 			<Add option="-Weffc++" />
 			<Add option="-std=c++17" />
 			<Add option="-fPIC" />
+			<Add option="-Wzero-as-null-pointer-constant" />
 			<Add option="-Wmissing-include-dirs" />
 			<Add option="-fexceptions" />
 			<Add option="-fstack-protector" />
@@ -71,11 +103,12 @@
 			<Add option="-Wl,-z,defs" />
 			<Add option="-Wl,-z,now" />
 			<Add option="-Wl,-z,relro" />
-			<Add option="-nostdlib" />
+			<Add option="-Wl,-nostdlib" />
 			<Add directory="../smallrdf/include" />
 			<Add directory="../ESPAsyncWebServer/src" />
-			<Add directory="/usr/share/arduino/hardware/arduino/cores/arduino" />
-			<Add directory="/usr/share/arduino/hardware/tools" />
+			<Add directory="$(ARDUINO_DIR)/hardware/arduino/avr/cores/arduino" />
+			<Add directory="$(ARDUINO_DIR)/hardware/tools" />
+			<Add directory="../ESPAsyncTCP/src" />
 		</Compiler>
 		<Unit filename="src/Hydra.cpp" />
 		<Unit filename="src/Hydra.h" />

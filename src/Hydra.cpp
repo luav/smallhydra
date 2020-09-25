@@ -27,7 +27,7 @@ Hydra::~Hydra()
 
 void Hydra::begin(const String& filename, const String& path, const String& hostname)
 {
-	this->path = path;
+	this->path = String(path);  // Acquire the ownership
 	readApiDocument(filename);
 }
 
@@ -64,7 +64,6 @@ void Hydra::handleApiRequest(AsyncWebServerRequest& request)
 		api = patchApiDocument(hostname);
 	}
 
-	String *content = new String();
 	NTriplesSerializer  ser;
 	request.send(200, "application/n-triples", ser.serialize(api).c_str());
 }
