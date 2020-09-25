@@ -5,7 +5,7 @@
 #ifndef HYDRA_H_
 #define HYDRA_H_
 
-//#include "ESPAsyncWebServer.h"
+#include "ESPAsyncWebServer.h"
 #include "RDF.hpp"
 
 
@@ -15,7 +15,7 @@ namespace smallhydra
 using namespace smallrdf;
 using smallrdf::String;
 
-class AsyncWebServerRequest;  // Defined in ESPAsyncWebServer
+//class AsyncWebServerRequest;  // Defined in ESPAsyncWebServer
 
 class Hydra {
 	Document document;

@@ -1,3 +1,6 @@
+// (c) 2016 Thomas Bergwinkl
+// (c) 2020 Artem Lutov
+
 // namespace espdefs {
 #ifdef ESP32
 #include <WiFi.h>
@@ -13,12 +16,6 @@
 #include "SPIFFS.h"
 // }  // espdefs
 
-// // Note: Arduino.h may define min and max macroses that break C++ stdlib compilation
-// #if defined(_LIBCPP_VERSION) || defined(__GLIBCXX__) || defined(__cpp_lib_result_of_sfinae)
-// #undef max
-// #undef min
-// #endif // C++ stdlib
-
 #include "Hydra.h"
 #include "RDF.hpp"
 #include "NTriplesParser.h"
@@ -29,6 +26,7 @@ using namespace smallhydra;
 using namespace smallrdf;
 // using namespace espdefs;
 using RdfString = smallrdf::String;
+using smallrdf::AString;
 
 const char* ssid = "";
 const char* password = "";
@@ -82,12 +80,12 @@ public:
 		Document document;
 
 		const RdfString* iri = document.string(RdfString(hydra.absoluteUrl(*request), true));
-		const NamedNode* subject = document.namedNode(iri);
+		const NamedNode* subject = document.namedNode(*iri);
 
 		const Quad* typeQuad = document.quad(*subject, *document.namedNode(Type), *document.namedNode(dhLightClass));
 
 		RdfString* status = isOn() ? &dhOnClass : &dhOffClass;
-		const Quad* statusQuad = document.quad(*subject, document.namedNode(dhState), document.namedNode(*status));
+		const Quad* statusQuad = document.quad(*subject, *document.namedNode(dhState), *document.namedNode(*status));
 
 		NTriplesSerializer  ser;
 		AsyncWebServerResponse* response = request->beginResponse(200, "application/n-triples", ser.serialize(document).c_str());
@@ -100,7 +98,7 @@ public:
 		Document document;
 		NTriplesParser  prs;
 		prs.parse(*document.string(RdfString(data, len)));
-		const Quad* state = document.quads.find(Quad(0, document.namedNode(dhState)));
+		const Quad* state = document.find(Quad(0, document.namedNode(dhState)));
 
 		if (state) {
 			if (*state->object->value == dhOnClass) {
