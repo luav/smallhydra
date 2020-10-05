@@ -125,13 +125,13 @@ void setup ()
 	hydra.begin(RdfString("/api.nt"), RdfString("api"));
 	led0.begin();
 
-	server.on("/api", HTTP_GET, [&hydra](AsyncWebServerRequest* request) {
+	server.on("/api", HTTP_GET, [](AsyncWebServerRequest* request) {
 		Serial.println("GET /api");
 
 		hydra.handleApiRequest(*request);
 	});
 
-	server.on("/", HTTP_GET, [&led0](AsyncWebServerRequest* request) {
+	server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
 		Serial.println("GET /");
 
 		led0.get(request);
@@ -139,7 +139,7 @@ void setup ()
 
 	server.on("/", HTTP_PUT, [](AsyncWebServerRequest* request) {
 	}, [](AsyncWebServerRequest* request, AString filename, size_t index, uint8_t* data, size_t len, bool final) {
-	}, [&led0](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
+	}, [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
 		Serial.println("PUT /");
 
 		led0.put(request, data, len);
