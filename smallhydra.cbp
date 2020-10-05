@@ -14,15 +14,15 @@
 				<Option createDefFile="1" />
 				<Option createStaticLib="1" />
 				<Compiler>
-					<Add option="-Wall" />
-					<Add option="-g" />
 					<Add option="-Wshadow" />
 					<Add option="-Winit-self" />
 					<Add option="-Wredundant-decls" />
 					<Add option="-Winline" />
 					<Add option="-Wswitch-enum" />
 					<Add option="-Wswitch-default" />
+					<Add option="-Wall" />
 					<Add option="-Og" />
+					<Add option="-g" />
 					<Add option="-shared" />
 					<Add option="-fasynchronous-unwind-tables" />
 					<Add option="-fstack-protector-all" />
@@ -63,6 +63,7 @@
 				<Compiler>
 					<Add option="-mmcu=atmega3250" />
 					<Add option="-Wall" />
+					<Add option="-std=c++14" />
 					<Add option="-g" />
 					<Add option="-Wshadow" />
 					<Add option="-Winit-self" />

@@ -78,7 +78,7 @@ void Hydra::readApiDocument(const String& path)
 	if(raw)
 		delete raw;
 	raw = prs.release();
-	for(auto piq = document.quads.begin(); piq != document.quads.end(); piq = piq->next())
+	for(Document::Quads::Iter* piq = document.quads.begin(); piq != document.quads.end(); piq = piq->next())
 		raw.quads.add(**piq);
 }
 
@@ -90,11 +90,10 @@ Dataset& Hydra::patchApiDocument(const String& hostname)
 	hnameUrl += path;
 	const Term* apiTerm = document.namedNode(hnameUrl);
 
-
 	if (!raw)
 		return document;
 	Dataset& patched = document;
-	for(auto piq = document.quads.begin(); piq != document.quads.end(); piq = piq->next()) {
+	for(Document::Quads::Iter* piq = document.quads.begin(); piq != document.quads.end(); piq = piq->next()) {
 		const Quad& triple = **piq;
 		const Term* subject = triple.subject;
 		const Term* object = triple.object;

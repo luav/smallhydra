@@ -21,7 +21,7 @@ LIB =
 LDFLAGS = 
 
 INC_DEBUG = $(INC) -Isrc
-CFLAGS_DEBUG = $(CFLAGS) -Wall -g -Wshadow -Winit-self -Wredundant-decls -Winline -Wswitch-enum -Wswitch-default -Og -shared -fasynchronous-unwind-tables -fstack-protector-all -D_FORTIFY_SOURCE=2 -D_GLIBCXX_ASSERTIONS
+CFLAGS_DEBUG = $(CFLAGS) -Wshadow -Winit-self -Wredundant-decls -Winline -Wswitch-enum -Wswitch-default -Wall -Og -g -shared -fasynchronous-unwind-tables -fstack-protector-all -D_FORTIFY_SOURCE=2 -D_GLIBCXX_ASSERTIONS
 RESINC_DEBUG = $(RESINC)
 RCFLAGS_DEBUG = $(RCFLAGS)
 LIBDIR_DEBUG = $(LIBDIR) -L../smallrdf/bin/Debug
